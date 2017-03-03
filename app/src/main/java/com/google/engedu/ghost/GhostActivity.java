@@ -36,12 +36,16 @@ public class GhostActivity extends AppCompatActivity {
 
     private static final String COMPUTER_TURN = "Computer's turn";
     private static final String USER_TURN = "Your turn";
+    public static String firstPlayer = "user";
+    public static String currentPlayer = "user";
+    TextView gameStatus;
+    TextView ghostText;
+    Button challenge;
+    Button restart;
     private GhostDictionary dictionary;
     private boolean userTurn = false;
     private Random random = new Random();
     private String wordFragment = "";
-    public static String firstPlayer = "user";
-    public static String currentPlayer = "user";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,12 +55,17 @@ public class GhostActivity extends AppCompatActivity {
 
         try {
             InputStream inputStream = assetManager.open("words.txt");
-            dictionary = new SimpleDictionary(inputStream);
+            // dictionary = new SimpleDictionary(inputStream);
+            dictionary = new FastDictionary(inputStream);
         } catch(Exception e) {
             e.printStackTrace();
         }
 
-        final Button restart = (Button) findViewById(R.id.restart);
+        gameStatus = (TextView) findViewById(R.id.gameStatus);
+        ghostText = (TextView) findViewById(R.id.ghostText);
+        restart = (Button) findViewById(R.id.restart);
+        challenge = (Button) findViewById(R.id.challenge);
+
         restart.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 onStart(v);
@@ -72,9 +81,7 @@ public class GhostActivity extends AppCompatActivity {
         super.onRestoreInstanceState(savedInstanceState);
 
         // Restore state members from saved instance
-        TextView label = (TextView) findViewById(R.id.gameStatus);
-        TextView ghostText = (TextView) findViewById(R.id.ghostText);
-        label.setText(savedInstanceState.getString(GAME_STATUS));
+        gameStatus.setText(savedInstanceState.getString(GAME_STATUS));
         wordFragment = savedInstanceState.getString(WORD_FRAGMENT);
         ghostText.setText(wordFragment);
         userTurn = savedInstanceState.getBoolean(SAVED_USER_TURN);
@@ -109,22 +116,18 @@ public class GhostActivity extends AppCompatActivity {
      * @return true
      */
     public boolean onStart(View view) {
-        final Button restart = (Button) findViewById(R.id.restart);
         restart.setClickable(true);
-        final Button challenge = (Button) findViewById(R.id.challenge);
         challenge.setClickable(true);
 
         wordFragment = "";
         userTurn = random.nextBoolean();
-        TextView text = (TextView) findViewById(R.id.ghostText);
-        text.setText("");
-        TextView label = (TextView) findViewById(R.id.gameStatus);
+        ghostText.setText("");
         if (userTurn) {
-            label.setText(USER_TURN);
+            gameStatus.setText(USER_TURN);
             firstPlayer = "user";
             currentPlayer = "user";
         } else {
-            label.setText(COMPUTER_TURN);
+            gameStatus.setText(COMPUTER_TURN);
             firstPlayer = "computer";
             currentPlayer = "computer";
             computerTurn();
@@ -138,41 +141,35 @@ public class GhostActivity extends AppCompatActivity {
         otherwise if a word can be formed with the fragment as prefix, declare victory for the computer and display a possible word
         If a word cannot be formed with the fragment, declare victory for the user
          */
-        TextView label = (TextView) findViewById(R.id.gameStatus);
         if(wordFragment.length() >= 4 && dictionary.isWord(wordFragment)) {
-            label.setText(R.string.user_wins);
-            final Button challenge = (Button) findViewById(R.id.challenge);
+            gameStatus.setText(R.string.user_wins);
             challenge.setClickable(false);
             return;
         }
         String word = dictionary.getGoodWordStartingWith(wordFragment);
+//        String word = dictionary.getAnyWordStartingWith(wordFragment);
         if (word == null) {
-            label.setText(R.string.user_wins);
-            final Button challenge = (Button) findViewById(R.id.challenge);
+            gameStatus.setText(R.string.user_wins);
             challenge.setClickable(false);
         } else {
-            label.setText(R.string.computer_wins);
-            final Button challenge = (Button) findViewById(R.id.challenge);
+            gameStatus.setText(R.string.computer_wins);
             challenge.setClickable(false);
         }
     }
 
     private void computerTurn() {
         currentPlayer = "computer";
-        TextView gameStatus = (TextView) findViewById(R.id.gameStatus);
-        TextView ghostText = (TextView) findViewById(R.id.ghostText);
 
         // Do computer turn stuff then make it the user's turn again
         if(wordFragment.length() >= 4 && dictionary.isWord(wordFragment)) {
             gameStatus.setText(R.string.computer_wins);
-            final Button challenge = (Button) findViewById(R.id.challenge);
             challenge.setClickable(false);
             return;
         }
         String word = dictionary.getGoodWordStartingWith(wordFragment);
+//        String word = dictionary.getAnyWordStartingWith(wordFragment);
         if (word == null) {
             gameStatus.setText(R.string.computer_wins);
-            final Button challenge = (Button) findViewById(R.id.challenge);
             challenge.setClickable(false);
         } else {
             wordFragment += word.substring(wordFragment.length(), wordFragment.length() + 1);
@@ -195,13 +192,10 @@ public class GhostActivity extends AppCompatActivity {
         if (!Character.isLetter(c)) {
             return super.onKeyUp(keyCode, event);
         }
-        TextView text = (TextView) findViewById(R.id.ghostText);
         wordFragment += String.valueOf(c);
-        text.setText(wordFragment);
+        ghostText.setText(wordFragment);
         if (dictionary.isWord(wordFragment)) {
-            TextView gameStatus = (TextView) findViewById(R.id.gameStatus);
             gameStatus.setText(R.string.computer_wins);
-            final Button challenge = (Button) findViewById(R.id.challenge);
             challenge.setClickable(false);
         }
         computerTurn();
@@ -211,7 +205,6 @@ public class GhostActivity extends AppCompatActivity {
     @Override
     public void onSaveInstanceState(Bundle savedInstanceState) {
         // Save the user's current game state
-        TextView gameStatus = (TextView) findViewById(R.id.gameStatus);
         String status = gameStatus.getText().toString();
         savedInstanceState.putString(GAME_STATUS, status);
         savedInstanceState.putString(WORD_FRAGMENT, wordFragment);
